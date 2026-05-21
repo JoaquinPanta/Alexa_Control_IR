@@ -1,0 +1,83 @@
+import { IoTDataPlaneClient, PublishCommand } from "@aws-sdk/client-iot-data-plane";
+
+const IOT_ENDPOINT = "a1yeki2zwyj8jj-ats.iot.us-east-1.amazonaws.com";
+
+const client = new IoTDataPlaneClient({ 
+    endpoint: `https://${IOT_ENDPOINT}`,
+    region: "us-east-1" 
+});
+
+const INTENT_HANDLERS = {
+    "EncenderTVIntent":    { topic: "casa/tv/power",  command: "tv_on" },
+    "ApagarTVIntent":      { topic: "casa/tv/power",  command: "tv_off" },
+    "VolumenSubirIntent":  { topic: "casa/tv/volume", command: "volume_up" },
+    "VolumenBajarIntent":  { topic: "casa/tv/volume", command: "volume_down" },
+
+    "SiguienteCancionIntent":        { topic: "casa/audio/control", command: "audio_next" },
+    "ReproducirNuevamenteIntent":    { topic: "casa/audio/control", command: "audio_prev" },
+    "PausarCancionIntent":           { topic: "casa/audio/control", command: "audio_pause" },
+    "ReproducirCancionIntent":       { topic: "casa/audio/control", command: "audio_play" },
+    "SubirVolumenReproductorIntent": { topic: "casa/audio/control", command: "audio_vol_up" },
+    "BajarVolumenReproductorIntent": { topic: "casa/audio/control", command: "audio_vol_down" },
+    "MutearReproductorIntent":       { topic: "casa/audio/control", command: "audio_mute" }
+};
+
+const buildAlexaResponse = (message, endSession = true) => ({
+    version: '1.0',
+    response: {
+        outputSpeech: { type: 'PlainText', text: message },
+        shouldEndSession: endSession
+    }
+});
+
+export const handler = async (event) => {
+    console.log("EVENTO:", JSON.stringify(event));
+
+    try {
+        const requestType = event.request.type;
+
+        if (requestType === "LaunchRequest") {
+            return buildAlexaResponse("Control universal listo. ¿Qué dispositivo deseas controlar?", false);
+        }
+
+        if (requestType === "IntentRequest") {
+            const intentName = event.request.intent.name;
+            const action = INTENT_HANDLERS[intentName];
+
+            if (!action) {
+                return buildAlexaResponse("Ese comando no está configurado.");
+            }
+
+            // --- LÓGICA NUEVA: EXTRAER EL NÚMERO DE VECES ---
+            let vecesRepetir = 1; 
+            const slots = event.request.intent.slots;
+            
+            if (slots && slots.veces && slots.veces.value) {
+                vecesRepetir = parseInt(slots.veces.value, 10);
+                if (isNaN(vecesRepetir) || vecesRepetir < 1) vecesRepetir = 1;
+                if (vecesRepetir > 10) vecesRepetir = 10; // Límite de seguridad para evitar bucles infinitos
+            }
+
+            // Enviamos el comando junto con el número de veces en el JSON
+            const input = {
+                topic: action.topic,
+                payload: Buffer.from(JSON.stringify({ 
+                    command: action.command,
+                    times: vecesRepetir 
+                })),
+                qos: 0
+            };
+
+            const command = new PublishCommand(input);
+            await client.send(command);
+            
+            return buildAlexaResponse(vecesRepetir > 1 ? `Comando enviado ${vecesRepetir} veces.` : "Comando enviado.");
+        }
+
+        return buildAlexaResponse("Lo siento, no entendí eso.", true);
+
+    } catch (error) {
+        console.error("ERROR DETALLADO:", error);
+        return buildAlexaResponse("Hubo un error al procesar el comando.");
+    }
+};

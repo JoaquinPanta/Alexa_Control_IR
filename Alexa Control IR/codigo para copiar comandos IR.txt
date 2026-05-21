@@ -1,0 +1,128 @@
+/*==================================================
+  IR ESP32 - Captura y envío de señales IR
+  Receptor : GPIO 22
+  Transmisor: GPIO 4
+==================================================*/
+
+#include <Arduino.h>
+#include <IRremote.h>
+
+/* ---------- Pines ---------- */
+#define IR_RECEIVE_PIN     22
+#define IR_SEND_PIN         4
+#define ENABLE_LED_FEEDBACK false
+
+/* ---------- Estado global ---------- */
+IRData storedIRData;
+bool   codeStored = false;
+
+/* ================================================
+   Menú
+================================================ */
+void printMenu() {
+  Serial.println();
+  Serial.println("======= MENU IR ESP32 =======");
+  Serial.println("1 -> Capturar señal IR");
+  Serial.println("2 -> Enviar señal guardada");
+  Serial.println("=============================");
+  Serial.println();
+}
+
+/* ================================================
+   Capturar señal IR
+================================================ */
+void captureIRSignal() {
+  Serial.println();
+  Serial.println("Esperando señal IR...");
+  Serial.println("Apunta el control al receptor.");
+
+  while (true) {
+    if (!IrReceiver.decode()) continue;
+
+    if (IrReceiver.decodedIRData.protocol == UNKNOWN) {
+      IrReceiver.resume();
+      continue;
+    }
+
+    storedIRData = IrReceiver.decodedIRData;
+    codeStored   = true;
+
+    Serial.println();
+    Serial.println("=== Señal capturada ===");
+    Serial.print("Protocolo : "); Serial.println(getProtocolString(storedIRData.protocol));
+    Serial.print("Dirección : 0x"); Serial.println(storedIRData.address,        HEX);
+    Serial.print("Comando   : 0x"); Serial.println(storedIRData.command,        HEX);
+    Serial.print("RawData   : 0x"); Serial.println(storedIRData.decodedRawData, HEX);
+    Serial.print("Bits      : "); Serial.println(storedIRData.numberOfBits);
+    Serial.println("=======================");
+
+    IrReceiver.resume();
+    break;
+  }
+}
+
+/* ================================================
+   Enviar señal IR almacenada
+================================================ */
+void sendStoredCode() {
+  if (!codeStored) {
+    Serial.println("No hay señal almacenada.");
+    return;
+  }
+
+  Serial.println();
+  Serial.println("Enviando señal IR...");
+  Serial.print("Protocolo: ");
+  Serial.println(getProtocolString(storedIRData.protocol));
+
+  IrSender.write(&storedIRData);
+
+  Serial.println("Señal enviada.");
+}
+
+/* ================================================
+   Setup
+================================================ */
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+
+  Serial.println();
+  Serial.println("Sistema IR ESP32 iniciado");
+
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
+
+  // CORRECCIÓN: En IRremote v3 con ESP32, el tercer parámetro
+  // activa el PWM por hardware necesario para modular la señal IR.
+  // Sin él, el pin no genera la portadora de 38kHz y el LED no emite.
+  IrSender.begin(IR_SEND_PIN, true, 0);
+
+  Serial.print("Receptor IR  : GPIO "); Serial.println(IR_RECEIVE_PIN);
+  Serial.print("Transmisor IR: GPIO "); Serial.println(IR_SEND_PIN);
+
+  printMenu();
+}
+
+/* ================================================
+   Loop
+================================================ */
+void loop() {
+  if (!Serial.available()) return;
+
+  char option = Serial.read();
+
+  switch (option) {
+    case '1':
+      captureIRSignal();
+      printMenu();
+      break;
+
+    case '2':
+      sendStoredCode();
+      printMenu();
+      break;
+
+    default:
+      break;
+  }
+}

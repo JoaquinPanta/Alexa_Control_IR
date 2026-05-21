@@ -1,0 +1,57 @@
+Television:
+Encender/Apagar tele: 
+Protocolo : Samsung
+Dirección : 0x707
+Comando   : 0xE6
+RawData   : 0x19E60707
+Bits      : 32
+Subir Volumen tele:
+Protocolo : Samsung
+Dirección : 0x707
+Comando   : 0x7
+RawData   : 0xF8070707
+Bits      : 32
+Bajar Volumen tele:
+Protocolo : Samsung
+Dirección : 0x707
+Comando   : 0xB
+RawData   : 0xF40B0707
+Bits      : 32
+
+Reproductor Bluetooth:
+Siguiente cancion:
+Protocolo : NEC
+Dirección : 0x0
+Comando   : 0x40
+RawData   : 0xBF40FF00
+Bits      : 32
+Reproducir de nuevo la cancion:
+Protocolo : NEC
+Dirección : 0x0
+Comando   : 0x44
+RawData   : 0xBB44FF00
+Bits      : 32
+Pausar/Continuar cancion:
+Protocolo : NEC
+Dirección : 0x0
+Comando   : 0x43
+RawData   : 0xBC43FF00
+Bits      : 32
+Subir volumen:
+Protocolo : NEC
+Dirección : 0x0
+Comando   : 0x15
+RawData   : 0xEA15FF00
+Bits      : 32
+Bajar volumen:
+Protocolo : NEC
+Dirección : 0x0
+Comando   : 0x7
+RawData   : 0xF807FF00
+Bits      : 32
+Mutear volumen:
+Protocolo : NEC
+Dirección : 0x0
+Comando   : 0x47
+RawData   : 0xB847FF00
+Bits      : 32
